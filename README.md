@@ -22,3 +22,5 @@ successfully. A rendered `.html` output of the R Markdown is available on reques
 
 - All paths use the `here` R package.
 - Code is organised for clarity and reproducibility.
+
+- [`20240126_pca.R`](https://github.com/jackharper-genomics/global-sparrow-pca/blob/main/scripts/20240126_pca.R)
