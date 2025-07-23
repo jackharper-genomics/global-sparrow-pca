@@ -1,0 +1,114 @@
+##########
+#
+# Global population structure PCA plot
+# Jack Harper - 2024/01/26
+#
+##########
+
+
+### ENVIRONMENT
+# clean
+rm(list = ls())
+
+# load packages
+library(tidyverse)
+library(here)
+
+
+### READ DATA
+# load eigenval
+eigenval_path <- here("04_pca", "sparrow_final_MAF_0.05.eigenval")
+eigenval <- scan(eigenval_path)
+
+# load eigenvec 
+pca_path <- here("04_pca", "sparrow_final_MAF_0.05.eigenvec")
+pca <- read_table(pca_path, col_names = FALSE)
+
+# load sample metadata
+info_path <- here("01_sample_data", "chapter_1_sample_metadata_final.csv")
+info <- read_csv(info_path)
+
+
+### REFORMAT DATA
+# change header name 
+pca <- rename(pca, ID = X1, PC1 = X3, PC2 = X4, PC3 = X5, PC4 = X6, PC5 = X7, PC6 = X8, PC7 = X9, PC8 = X10, PC9 = X11, PC10 = X12)
+
+# remove duplicate ID column (X2)
+pca <- pca[,-2]
+
+
+### MERGE FILES
+# rename uon_id to ID in info file
+info <- info %>% rename(ID = uon_id)
+
+# merge info and eigenvec
+pca <- full_join(pca, info, by="ID", copy=FALSE)
+
+# remove empty rows from filtered samples
+pca <- pca[-471:-493, ]
+
+# convert to data frame
+pca <- as_tibble(pca)
+
+# convert PC columns to numeric to avoid character plotting error
+pca$PC1 <- as.numeric(pca$PC1)
+pca$PC2 <- as.numeric(pca$PC2)
+pca$PC3 <- as.numeric(pca$PC3)
+
+
+### PLOT VARIANCE
+# convert to percentage variance explained
+pve <- data.frame(PC = 1:10, pve = eigenval/sum(eigenval)*100)
+
+# make plot of PCs
+pve_plot <- ggplot(pve, aes(PC, pve)) + 
+  geom_bar(stat = "identity") + 
+  ylab ("Percentage variance explained") + 
+  theme_light()
+pve_plot
+
+# calculate cumulative sum of variance explained
+cumsum(pve$pve)
+
+
+### MAIN PLOT
+# define colour palettes
+status_palette <- c("hotpink", "gold", "green", "red2", "blue3")
+# status palette in order: introduced, italian sparrow, native, spanish sparrow, subspecies
+
+continent_palette <- c("darkorange1", "blue3", "green", "lightskyblue", "gold", "purple", "hotpink", "red2")
+# continent_palette in order: africa, asia, australasia, europe, italian sparrow, north america, south america, spanish sparrow
+
+# plot pca for status
+pca_plot_status <- ggplot(pca, aes(PC1, PC2, col = status, shape = species_group)) + 
+  geom_point(size = 3) +
+  coord_equal() +
+  theme_light() +
+  scale_colour_manual(values=status_palette) +
+  scale_shape_manual(values=c(19, 2, 6, 0, 5)) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) + 
+  ylab(paste0("PC2 (", signif(pve$pve[2], 3), "%)")) +
+  theme(legend.position="right", 
+        axis.text=element_text(size=12), 
+        axis.title=element_text(size=14), 
+        legend.text=element_text(size=12), 
+        legend.title=element_blank())
+pca_plot_status
+
+# plot pca for continent
+pca_plot_continent <- ggplot(pca, aes(PC1, PC2, col = continent, shape = species_group)) + 
+  geom_point(size = 2.5, alpha = 1) +
+  coord_equal() +
+  theme_light() +
+  scale_colour_manual(values=continent_palette) +
+  scale_shape_manual(values=c(19, 2, 6, 0, 5)) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) + 
+  ylab(paste0("PC2 (", signif(pve$pve[2], 3), "%)")) +
+  theme(legend.position="right", 
+        axis.text=element_text(size=12), 
+        axis.title=element_text(size=14), 
+        legend.text=element_text(size=12), 
+        legend.title=element_blank())
+pca_plot_continent
+
+
